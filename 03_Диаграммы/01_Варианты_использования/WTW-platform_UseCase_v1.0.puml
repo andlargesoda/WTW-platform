@@ -53,6 +53,7 @@ Guest --> UC_Register
 Guest --> UC_Login
 Guest --> UC_Search
 Guest --> UC_ViewPublic
+Guest --> UC_Random
 
 User --> UC_Search
 User --> UC_ViewPublic
