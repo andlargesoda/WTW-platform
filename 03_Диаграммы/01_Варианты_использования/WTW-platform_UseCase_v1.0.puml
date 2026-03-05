@@ -14,7 +14,7 @@ actor "Зарегистрированный\nпользователь" as User
 actor "Администратор" as Admin
 
 ' Внешние системы
-actor "Социальные\nсети\n(VK, Google,\nTelegram, OK)" as Social
+actor "Социальные\nсети\n(VK,\nTelegram,\nOK)" as Social
 actor "Почтовый\nсервис" as Mail
 actor "Основной\nсайт\nонлайн-кинотеатра" as CoreSite
 actor "Рекламная\nсеть" as Ads
@@ -22,20 +22,20 @@ actor "Рекламная\nсеть" as Ads
 ' Онлайн-кинотеатр
 rectangle "Онлайн-кинотеатр\n«Что посмотреть?»" {
 
-  usecase "UC-01\nРегистрация\nпользователя" as UC_Register
-  usecase "UC-02\nАвторизация" as UC_Login
-  usecase "UC-03\nАвторизация\nчерез\nсоциальные\nсети" as UC_SocialLogin
-  usecase "UC-04\nПодтверждение\ne-mail" as UC_EmailConfirm
-  
-  usecase "UC-05\nПоиск\nфильма" as UC_Search
-  usecase "UC-06\nПросмотр\nпубличных\nподборок" as UC_ViewPublic
-  
-  usecase "UC-07\nСоздание\nподборки" as UC_CreateCollection
-  usecase "UC-08\nРедактирование\nподборки" as UC_EditCollection
-  usecase "UC-09\nУдаление\nподборки" as UC_DeleteCollection
-  
-  usecase "UC-10\nДобавление\nфильма\nв список" as UC_AddMovie
-  usecase "UC-11\nУдаление\nфильма\nиз списка" as UC_RemoveMovie
+  usecase "UC-1\nРегистрация\nпользователя" as UC_Register
+  usecase "UC-2\nАвторизация" as UC_Login
+  usecase "UC-3\nАвторизация\nчерез\nсоциальные\nсети" as UC_SocialLogin
+  usecase "UC-4\nПодтверждение\ne-mail" as UC_EmailConfirm
+
+  usecase "UC-5\nПоиск\nфильма" as UC_Search
+  usecase "UC-6\nПросмотр\nпубличных\nподборок" as UC_ViewPublic
+
+  usecase "UC-7\nСоздание\nподборки" as UC_CreateCollection
+  usecase "UC-8\nРедактирование\nподборки" as UC_EditCollection
+  usecase "UC-9\nУдаление\nподборки" as UC_DeleteCollection
+
+  usecase "UC-10\nДобавление\nфильма\nв подборку" as UC_AddMovie
+  usecase "UC-11\nУдаление\nфильма\nиз подборки" as UC_RemoveMovie
   
   usecase "UC-12\nДобавление\nзаметки" as UC_AddNote
   usecase "UC-13\nРедактирование\nзаметки" as UC_EditNote
@@ -49,29 +49,29 @@ rectangle "Онлайн-кинотеатр\n«Что посмотреть?»" {
 }
 
 ' Связи пользователей
-Guest --> UC_Register
-Guest --> UC_Login
-Guest --> UC_Search
-Guest --> UC_ViewPublic
-Guest --> UC_Random
+Guest -- UC_Register
+Guest -- UC_Login
+Guest -- UC_Search
+Guest -- UC_ViewPublic
+Guest -- UC_Random
 
-User --> UC_Search
-User --> UC_ViewPublic
-User --> UC_CreateCollection
-User --> UC_EditCollection
-User --> UC_DeleteCollection
-User --> UC_AddMovie
-User --> UC_RemoveMovie
-User --> UC_AddNote
-User --> UC_EditNote
-User --> UC_Random
+User -- UC_Search
+User -- UC_ViewPublic
+User -- UC_CreateCollection
+User -- UC_EditCollection
+User -- UC_DeleteCollection
+User -- UC_AddMovie
+User -- UC_RemoveMovie
+User -- UC_AddNote
+User -- UC_EditNote
+User -- UC_Random
 
-Admin --> UC_Moderate
-Admin --> UC_Block
+Admin -- UC_Moderate
+Admin -- UC_Block
 
 ' Расширения и включения
-UC_Login --> UC_SocialLogin : <<extend>>
-UC_Register --> UC_EmailConfirm : <<include>>
+UC_Login <. UC_SocialLogin : <<extend>>
+UC_Register .> UC_EmailConfirm : <<include>>
 
 ' Связи внешних систем
 UC_SocialLogin --> Social
