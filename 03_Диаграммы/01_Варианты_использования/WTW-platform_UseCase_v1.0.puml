@@ -23,24 +23,24 @@ actor "Рекламная\nсеть" as Ads
 rectangle "Онлайн-кинотеатр\n«Что посмотреть?»" {
 
   usecase "UC-1\nРегистрация\nпользователя" as UC_Register
-  usecase "UC-2\nАвторизация" as UC_Login
-  usecase "UC-3\nАвторизация\nчерез\nсоциальные\nсети" as UC_SocialLogin
+  usecase "UC-2\nАвторизация\nпользователя" as UC_Login
+  usecase "UC-3\nАвторизация\nпользователя\nчерез\nсоциальные\nсети" as UC_SocialLogin
   usecase "UC-4\nПодтверждение\ne-mail" as UC_EmailConfirm
 
-  usecase "UC-5\nПоиск\nфильма" as UC_Search
+  usecase "UC-5\nПоиск\nфильма\n/сериала" as UC_Search
   usecase "UC-6\nПросмотр\nпубличных\nподборок" as UC_ViewPublic
 
   usecase "UC-7\nСоздание\nподборки" as UC_CreateCollection
   usecase "UC-8\nРедактирование\nподборки" as UC_EditCollection
   usecase "UC-9\nУдаление\nподборки" as UC_DeleteCollection
 
-  usecase "UC-10\nДобавление\nфильма\nв подборку" as UC_AddMovie
-  usecase "UC-11\nУдаление\nфильма\nиз подборки" as UC_RemoveMovie
+  usecase "UC-10\nДобавление\nфильма\n/сериала\nв подборку" as UC_AddMovie
+  usecase "UC-11\nУдаление\nфильма\n/сериала\nиз подборки" as UC_RemoveMovie
   
   usecase "UC-12\nДобавление\nзаметки" as UC_AddNote
   usecase "UC-13\nРедактирование\nзаметки" as UC_EditNote
   
-  usecase "UC-14\nСлучайный\nвыбор фильма" as UC_Random
+  usecase "UC-14\nСлучайный\nвыбор фильма\n/сериала" as UC_Random
   
   usecase "UC-15\nМодерация\nподборок" as UC_Moderate
   usecase "UC-16\nБлокировка\nпользователя" as UC_Block

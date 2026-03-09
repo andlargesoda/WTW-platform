@@ -1,0 +1,148 @@
+@startuml
+
+title Онлайн-кинотеатр "Что посмотреть?" - ER-диаграмма
+
+' Ориентация
+'left to right direction
+top to bottom direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+'Сущности
+entity User {
+  user_id : UUID <<PK>>
+  --
+  user_name : varchar
+  user_email : varchar
+  user_password_hash : varchar
+  user_role_id : UUID <<FK>>
+  user_status : enum
+  user_email_verified : boolean
+  user_created_at : timestamp
+}
+
+entity Role {
+  role_id : UUID <<PK>>
+  --
+  role_name : varchar
+  role_description : varchar
+}
+
+entity Collection {
+  collection_id : UUID <<PK>>
+  --
+  collection_name : varchar
+  collection_description : text
+  collection_type : enum
+  collection_author_id : UUID <<FK>>
+  collection_created_at : timestamp
+}
+
+entity Movie {
+  movie_id : UUID <<PK>>
+  --
+  movie_external_id : varchar
+  movie_title : varchar
+  movie_description : text
+  movie_year : integer
+  movie_poster_url : varchar
+}
+
+entity Genre {
+  genre_id : UUID <<PK>>
+  --
+  genre_name : varchar
+}
+
+entity Person {
+  person_id : UUID <<PK>>
+  --
+  person_name : varchar
+  person_photo_url : varchar
+}
+
+entity MovieGenre {
+  movie_genre_id : UUID <<PK>>
+  --
+  movie_id : UUID <<FK>>
+  genre_id : UUID <<FK>>
+}
+
+entity MoviePerson {
+  movie_person_id : UUID <<PK>>
+  --
+  movie_id : UUID <<FK>>
+  person_id : UUID <<FK>>
+  movie_person_role : enum
+}
+
+entity Rating {
+  rating_id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  movie_id : UUID <<FK>>
+  rating_value : integer
+  rated_at : timestamp
+}
+
+entity CollectionMovie {
+  collection_movie_id : UUID <<PK>>
+  --
+  collection_id : UUID <<FK>>
+  movie_id : UUID <<FK>>
+  collection_added_at : timestamp
+}
+
+entity Note {
+  note_id : UUID <<PK>>
+  --
+  note_text : varchar(5000)
+  user_id : UUID <<FK>>
+  collection_movie_id : UUID <<FK>>
+  note_created_at : timestamp
+}
+
+entity FavoriteCollection {
+  favorite_collection_id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  collection_id : UUID <<FK>>
+}
+
+entity AdminAction {
+  admin_action_id : UUID <<PK>>
+  --
+  admin_id : UUID <<FK>>
+  target_user_id : UUID <<FK>>
+  action_type : enum
+  reason : varchar
+  created_at : timestamp
+}
+
+'Связи сущностей
+
+Role ||--o{ User
+
+User ||--o{ Collection
+User ||--o{ Note
+User ||--o{ FavoriteCollection
+User ||--o{ Rating
+
+User ||--o{ AdminAction : admin_user_id
+User ||--o{ AdminAction : target_user_id
+
+Collection ||--o{ CollectionMovie
+Collection ||--o{ FavoriteCollection
+
+Movie ||--o{ CollectionMovie
+Movie ||--o{ MovieGenre
+Movie ||--o{ MoviePerson
+Movie ||--o{ Rating
+
+Genre ||--o{ MovieGenre
+
+Person ||--o{ MoviePerson
+
+CollectionMovie ||--o{ Note
+
+@enduml

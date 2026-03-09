@@ -1,0 +1,182 @@
+@startuml
+
+title Онлайн-кинотеатр "Что посмотреть?" - Диаграмма классов
+
+' Ориентация
+'left to right direction
+top to bottom direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+
+'Классы
+class User {
+    -userId : UUID <<PK>>
+    +userName : String
+    -userEmail : String <<UNIQUE>>
+    -userPasswordHash : String
+    -userRoleId : UUID <<FK>>
+    -userStatus : userStatus
+    -userEmailVerified : Boolean
+    -userCreatedAt : Timestamp
+    +userRegister() : void
+    +userLogin() : void
+    +userDeactivateAccount() : void
+}
+
+enum userStatus {
+    ACTIVE
+    BLOCKED
+}
+class Role {
+    -roleId : UUID <<PK>>
+    +roleName : roleName
+    +roleDescription : String
+}
+
+enum roleName {
+    GUEST
+    USER
+    ADMIN
+}
+
+class Collection {
+    -collectionId : UUID <<PK>>
+    +collectionName : String
+    +collectionDescription : String
+    +collectionType : collectionType
+    -collectionAuthorId : UUID <<FK>>
+    -collectionCreatedAt : Timestamp
+    +createCollection() : void
+    +updateCollection() : void
+    +deleteCollection() : void
+}
+
+enum collectionType {
+    PUBLIC
+    PRIVATE
+}
+
+class Movie {
+    -movieId : UUID <<PK>>
+    +movieTitle : String
+    +movieDescription : String
+    +movieYear : Integer
+    +moviePosterUrl : String
+    +searchMovie() : void
+}
+
+class Genre {
+    -genreId : UUID <<PK>>
+    +genreName : String <<UNIQUE>>
+}
+
+class Person {
+    -personId : UUID <<PK>>
+    +personName : String
+    +personPhotoUrl : String
+}
+
+class MovieGenre {
+    -movieGenreId : UUID <<PK>>
+    -movieId : UUID <<FK>>
+    -genreId : UUID <<FK>>
+}
+
+class MoviePerson {
+    -moviePersonId : UUID <<PK>>
+    -movieId : UUID <<FK>>
+    -personId : UUID <<FK>>
+    +moviePersonRole : moviePersonRole
+}
+
+enum moviePersonRole {
+    DIRECTOR
+    PRODUCER
+    ACTOR
+    WRITER
+    DIRECTOROFPHOTOGRAPHY
+    PRODUCTIONDESIGNER
+    COMPOSER
+    EDITOR
+}
+
+class Rating {
+    -ratingId : UUID <<PK>>
+    -userId : UUID <<FK>>
+    -movieId : UUID <<FK>>
+    +ratingValue : Integer <<1..10>>
+    -ratedAt : Timestamp
+    +rateMovie() : void
+    +updateRating() : void
+}
+
+class CollectionMovie {
+    -collectionMovieId : UUID <<PK>>
+    -collectionId : UUID <<FK>>
+    -movieId : UUID <<FK>>
+    -collectionMovieAddedAt : Timestamp
+    +addCollectionMovie() : void
+    +removeCollectionMovie() : void
+}
+
+class Note {
+    -noteId : UUID <<PK>>
+    +noteText : String(≤5000)
+    -userId : UUID <<FK>>
+    -collectionMovieId : UUID <<FK>>
+    -noteCreatedAt : Timestamp
+    +createNote() : void
+    +updateNote() : void
+    +deleteteNote() : void
+}
+
+class FavoriteCollection {
+    -favoriteCollectionId : UUID <<PK>>
+    -userId : UUID <<FK>>
+    -collectionId : UUID <<FK>>
+    +addToFavoriteCollections() : void
+    +removeFromFavoriteCollections() : void
+}
+
+class AdminAction {
+    -actionAdminId : UUID <<PK>>
+    -adminId : UUID <<FK>>
+    -targetUserId : UUID <<FK>>
+    +adminActionType : adminActionType
+    +adminActionReason : String
+    -adminActionCreatedAt : Timestamp
+}
+
+enum adminActionType {
+    BLOCK
+    WARNING
+}
+
+'Связи классов
+
+Role "1" -- "*" User
+
+User "1" -- "*" Collection  : владеет
+User "1" -- "*" Note  : пишет
+User "1" -- "*" FavoriteCollection  : добавляет
+User "1" -- "*" Rating  :  оценивает
+
+User "1" ---- "*" AdminAction : adminId
+User "1" ---- "*" AdminAction : targetUserId
+
+Collection "1" -- "*" CollectionMovie  : содержит
+Collection "1" -- "*" FavoriteCollection
+
+Movie "1" -- "*" CollectionMovie  : включается в
+Movie "1" -- "*" MovieGenre  : имеет
+Movie "1" -- "*" MoviePerson  : участвует
+Movie "1" -- "*" Rating  : получает
+
+Genre "1" -- "*" MovieGenre  : относится к
+
+Person "1" -- "*" MoviePerson  : участвует в
+
+CollectionMovie "1" -- "*" Note  : имеет заметку
+
+@enduml

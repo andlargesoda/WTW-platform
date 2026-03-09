@@ -1,0 +1,23 @@
+Присутствуют:
+UC-1 Регистрация пользователя POST /auth/register
+UC-2 Авторизация пользователя POST /auth/login
+UC-5 Поиск фильма GET /movies/search
+UC-7 Создание подборки POST /auth/login
+UC-8 Редактирование подборки PUT /collections/{collectionId}
+UC-9 Удаление подборки DELETE /collections/{collectionId}
+UC-10 Добавление фильма/сериала в подборку POST /collections/{collectionId}/movies
+UC-11 Удаление фильма/сериала из подборки DELETE /collections/{collectionId}/movies/{movieId}
+UC-12 Добавление заметки POST /notes
+UC-13 Редактирование заметки POST /notes
+
+Отсутствуют:
+UC-3 Авторизация пользователя через социальные сети
+UC-4 Подтверждение e-mail
+UC-6 Просмотр публичных подборок
+UC-14 Случайный выбор фильма/сериала
+UC-15 Модерация подборок
+UC-16 Блокировка пользователя
+
+Необходимо добавить:
+UC-18 Добавление подборки в избранное
+UC-18 Деактивация пользователя
