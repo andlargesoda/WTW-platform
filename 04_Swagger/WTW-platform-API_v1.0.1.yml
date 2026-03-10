@@ -1,0 +1,1790 @@
+openapi: '3.0.3'
+info:
+  title: API веб-сервиса онлайн-кинотеатра "Что посмотреть?"
+  version: '1.0'
+  description:     API для взаимодействия с платформой «Что посмотреть?». Позволяет управлять подборками фильмов,
+    заметками, пользователями и получать информацию о фильмах из каталога основного сайта.
+  termsOfService: https://api.wtw-platform.ru/v1/terms
+  contact:
+    name: Команда разработки веб-сервиса онлайн-кинотеатра "Что посмотреть?"
+    url: https://api.wtw-platform.ru/v1/support
+    email: dev@wtw-platform.ru
+  license:
+    name: license
+    url: https://api.wtw-platform.ru/v1/license
+
+servers:
+  - url: https://api.dev.wtw-platform.ru/v1
+    description: Сервер API среды разработки
+  - url: https://api.test.wtw-platform.ru/v1
+    description: Сервер API среды тестирования
+  - url: https://api.preprod.wtw-platform.ru/v1
+    description: Сервер API среды предпродуктивной
+  - url: https://api.wtw-platform.ru/v1
+    description: Сервер API среды продуктивной
+
+components:
+  
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен доступа, получаемый при авторизации
+
+  schemas:
+
+    # Пагинация
+    PaginationParams:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Номер страницы
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Количество элементов на странице
+
+    PaginatedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Массив элементов
+        total:
+          type: integer
+          description: Общее количество элементов
+        page:
+          type: integer
+          description: Текущая страница
+        limit:
+          type: integer
+          description: Количество элементов на странице
+
+    # Роли и пользователи
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя
+
+    userName:
+      type: string
+      minLength: 2
+      maxLength: 50
+      description: Имя пользователя
+
+    userPasswordHash:
+      type: string
+      format: password
+      minLength: 8
+      maxLength: 128
+      description: Хэш пароля пользователя
+
+    userEmail:
+      type: string
+      format: email
+      maxLength: 255
+      description: E-mail пользователя (уникальный)
+    
+    userStatus:
+      type: string
+      enum: [ACTIVE, BLOCKED]
+      description: Статус пользователя
+    
+    userEmailVerified:
+      type: boolean
+      description: Статус подтверждения e-mail пользователя
+    
+    userCreatedAt:
+      type: string
+      format: date-time
+      description: Дата регистрации пользователя
+    
+    roleId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор роли
+    
+    roleName:
+      type: string
+      enum: [GUEST, USER, ADMIN]
+      description: Название роли
+    
+    roleDescription:
+      type: string
+      description: Описание роли  
+    
+    User:
+      type: object
+      required:
+        - userId
+        - userName
+        - userEmail
+        - userRole
+        - userStatus
+        - userEmailVerified
+        - userCreatedAt
+      properties:
+        userId:
+          $ref: '#/components/schemas/userId'
+        userName:
+          $ref: '#/components/schemas/userName'
+        userEmail:
+          $ref: '#/components/schemas/userEmail'
+        userRole:
+          $ref: '#/components/schemas/Role'
+        userStatus:
+          $ref: '#/components/schemas/userStatus'
+        userEmailVerified:
+          $ref: '#/components/schemas/userEmailVerified'
+        userCreatedAt:
+          $ref: '#/components/schemas/userCreatedAt'
+    
+    Role:
+      type: object
+      required:
+        - roleId
+        - roleName
+        - roleDescription
+      properties:
+        roleId:
+          $ref: '#/components/schemas/roleId'
+        roleName:
+          $ref: '#/components/schemas/roleName'
+        roleDescription:
+          $ref: '#/components/schemas/roleDescription'
+
+    # Регистрация и авторизация
+    UserRegistrationRequest:
+      type: object
+      required:
+        - userName
+        - userEmail
+        - userPasswordHash
+      properties:
+        userName:
+          $ref: '#/components/schemas/userName'
+        userEmail:
+          $ref: '#/components/schemas/userEmail'
+        userPasswordHash:
+          $ref: '#/components/schemas/userPasswordHash'
+
+    UserLoginRequest:
+      type: object
+      required:
+        - userEmail
+        - userPasswordHash
+      properties:
+        userEmail:
+          $ref: '#/components/schemas/userEmail'
+        userPasswordHash:
+          $ref: '#/components/schemas/userPasswordHash'
+
+    OAuthLoginRequest:
+      type: object
+      required:
+        - accessToken
+        - provider
+      properties:
+        accessToken:
+          type: string
+          description: Токен доступа от социальной сети
+        provider:
+          type: string
+          enum: [vk, telegram, ok]
+          description: Провайдер аутентификации
+
+    AuthResponse:
+      type: object
+      required:
+        - userId
+        - userName
+        - accessToken
+        - tokenType
+      properties:
+        userId:
+          $ref: '#/components/schemas/userId'
+        userName:
+          $ref: '#/components/schemas/userName'
+        accessToken:
+          $ref: '#/components/schemas/accessToken'
+        tokenType:
+          $ref: '#/components/schemas/tokenType'
+
+    accessToken:
+      type: string
+      description: JWT токен доступа
+
+    tokenType:
+      type: string
+      example: 'Bearer'
+
+    # Фильмы/сериалы
+    movieId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор фильма/сериала
+
+    movieExternalId:
+      type: string
+      format: uuid
+      description: Идентификатор фильма/сериала с каталога основного сайта
+    
+    movieTitle:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: Название фильма/сериала
+    
+    movieDescription:
+      type: string
+      maxLength: 5000
+      description: Описание фильма/сериала
+    
+    movieYear:
+      type: integer
+      format: int32
+      minimum: 1895
+      maximum: 2100
+      description: Год выпуска фильма/сериала
+    
+    moviePosterUrl:
+      type: string
+      format: uri
+      maxLength: 2048
+      description: URL постера фильма/сериала
+    
+    genreId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор жанра
+    
+    genreName:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Название жанра
+    
+    personId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор участника фильма/сериала
+    
+    personName:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: Имя участника фильма/сериала
+    
+    personPhotoUrl:
+      type: string
+      format: uri
+      maxLength: 2048
+      description: URL фотографии участника фильма/сериала
+    
+    movieGenreId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор фильма/сериала-жанра
+    
+    moviePersonId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор фильма/сериала участника фильма/сериала
+    
+    moviePersonRole:
+      type: string
+      enum: [DIRECTOR, PRODUCER, ACTOR, WRITER, DIRECTOR_OF_PHOTOGRAPHY, PRODUCTION_DESIGNER, COMPOSER, EDITOR]
+      description: Роль участника фильма/сериала
+    
+    ratingId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор рейтинга
+    
+    ratingValue:
+      type: integer
+      minimum: 1
+      maximum: 10
+      description: Значение рейтинга
+    
+    ratedAt:
+      type: string
+      format: date-time
+      description: Дата выставления рейтинга
+    
+    Genre:
+      type: object
+      description: Жанр
+      required:
+        - genreId
+        - genreName
+      properties:
+        genreId:
+          $ref: '#/components/schemas/genreId'
+        genreName:
+          $ref: '#/components/schemas/genreName'
+    
+    Person:
+      type: object
+      description: Участник фильма/сериала
+      required:
+        - personId
+        - personName
+      properties:
+        personId:
+          $ref: '#/components/schemas/personId'
+        personName:
+          $ref: '#/components/schemas/personName'
+        personPhotoUrl:
+          $ref: '#/components/schemas/personPhotoUrl'
+    
+    Movie:
+      type: object
+      description: Фильм/сериал
+      required:
+        - movieId
+        - movieTitle
+        - movieYear
+      properties:
+        movieId:
+            $ref: '#/components/schemas/movieId'
+        movieExternalId:
+            $ref: '#/components/schemas/movieExternalId'
+        movieTitle:
+            $ref: '#/components/schemas/movieTitle'
+        movieDescription:
+            $ref: '#/components/schemas/movieDescription'
+        movieYear:
+            $ref: '#/components/schemas/movieYear'
+        moviePosterUrl:
+            $ref: '#/components/schemas/moviePosterUrl'
+        genres:
+          type: array
+          items:
+            $ref: '#/components/schemas/Genre'
+        persons:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoviePerson'
+    
+    MoviePerson:
+      type: object
+      description: Участники фильма/сериала
+      properties:
+        moviePersonId:
+            $ref: '#/components/schemas/moviePersonId'
+        movie:
+            $ref: '#/components/schemas/Movie'
+        person:
+          $ref: '#/components/schemas/Person'
+        moviePersonRole:
+          $ref: '#/components/schemas/moviePersonRole'
+    
+    MovieGenre:
+      type: object
+      description: Жанры фильма
+      properties:
+        movieGenreId:
+            $ref: '#/components/schemas/movieGenreId'
+        movie:
+            $ref: '#/components/schemas/Movie'
+        genre:
+          $ref: '#/components/schemas/Genre'
+    
+    MovieSearchResult:
+      type: array
+      description: Результаты поиска фильмов/сериалов
+      items:
+        $ref: '#/components/schemas/Movie'
+    
+    MovieDetail:
+      allOf:
+        - $ref: '#/components/schemas/Movie'
+        - type: object
+          properties:
+            averageRating:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 10
+              description: Средний рейтинг фильма
+            userRating:
+              type: integer
+              minimum: 1
+              maximum: 10
+              description: Оценка текущего пользователя (если есть)
+    
+    Rating:
+      type: object
+      description: Рейтинг
+      required:
+        - ratingValue
+        - movieId
+        - userId
+      properties:
+        ratingId:
+          $ref: '#/components/schemas/ratingId'
+        userId:
+          $ref: '#/components/schemas/userId'
+        movieId:
+          $ref: '#/components/schemas/movieId'
+        ratingValue:
+          $ref: '#/components/schemas/ratingValue'
+        ratedAt:
+          $ref: '#/components/schemas/ratedAt'
+
+    RateMovieRequest:
+      type: object
+      required:
+        - movieId
+        - ratingValue
+      properties:
+        movieId:
+          $ref: '#/components/schemas/movieId'
+        ratingValue:
+          $ref: '#/components/schemas/ratingValue'
+
+    UpdateRatingRequest:
+      type: object
+      required:
+        - ratingValue
+      properties:
+        ratingValue:
+          $ref: '#/components/schemas/ratingValue'
+  
+  # Подборки
+    collectionId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор подборки
+    
+    collectionName:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Название подборки
+    
+    collectionDescription:
+      type: string
+      maxLength: 2000
+      description: Описание подборки
+    
+    collectionType:
+      type: string
+      enum: [PUBLIC, PRIVATE]
+      description: Тип подборки (публичная, приватная)
+    
+    collectionCreatedAt:
+      type: string
+      format: date-time
+      description: Дата создания подборки
+    
+    Collection:
+      type: object
+      required:
+        - collectionId
+        - collectionName
+        - collectionType
+        - collectionAuthor
+      properties:
+        collectionId:
+          $ref: '#/components/schemas/collectionId'
+        collectionName:
+          $ref: '#/components/schemas/collectionName'
+        collectionDescription:
+          $ref: '#/components/schemas/collectionDescription'
+        collectionType:
+          $ref: '#/components/schemas/collectionType'
+        collectionAuthor:
+          $ref: '#/components/schemas/User'
+        collectionCreatedAt:
+          $ref: '#/components/schemas/collectionCreatedAt'
+    
+    CreateCollectionRequest:
+      type: object
+      description: Создание подборки
+      required:
+        - collectionName
+        - collectionType
+      properties:
+        collectionName:
+          $ref: '#/components/schemas/collectionName'
+        collectionDescription:
+          $ref: '#/components/schemas/collectionDescription'
+        collectionType:
+          $ref: '#/components/schemas/collectionType'
+    
+    UpdateCollectionRequest:
+      type: object
+      description: Редактирования подборки
+      properties:
+        collectionName:
+          $ref: '#/components/schemas/collectionName'
+        collectionDescription:
+          $ref: '#/components/schemas/collectionDescription'
+        collectionType:
+          $ref: '#/components/schemas/collectionType'
+  
+  # Фильм/сериал в подборке
+    collectionMovieId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор фильма/сериала в подборке
+    
+    collectionMovieAddedAt:
+      type: string
+      format: date-time
+      description: Дата добавления фильма/сериала в подборку
+    
+    CollectionMovie:
+      type: object
+      description: Фильм/сериал в подборке
+      properties:
+        collectionMovieId:
+          $ref: '#/components/schemas/collectionMovieId'
+        movie:
+          $ref: '#/components/schemas/Movie'
+        collectionMovieAddedAt:
+          $ref: '#/components/schemas/collectionMovieAddedAt'
+        note:
+          $ref: '#/components/schemas/Note'
+    
+    CollectionDetail:
+      description: Детальная информация о подборке фильмов/сериалов
+      allOf:
+        - $ref: '#/components/schemas/Collection'
+        - type: object
+          properties:
+            movies:
+              type: array
+              items:
+                $ref: '#/components/schemas/CollectionMovie'
+            moviesCount:
+              type: integer
+              description: Количество фильмов в подборке
+    
+    AddMovieToCollectionRequest:
+      type: object
+      description: Добавление фильма/сериала в подборку
+      required:
+        - movieId
+      properties:
+        movieId:
+          $ref: '#/components/schemas/movieId'
+        noteText:
+          $ref: '#/components/schemas/noteText'
+  
+  # Избранные подборки
+    favoriteCollectionId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор избранной подборки  
+    
+    FavoriteCollection:
+      type: object
+      required:
+        - favoriteCollectionId
+        - user
+        - collection
+      properties:
+        favoriteCollectionId:
+          $ref: '#/components/schemas/favoriteCollectionId'
+        user:
+          $ref: '#/components/schemas/User'
+        collection:
+          $ref: '#/components/schemas/Collection'
+        addedAt:
+          type: string
+          format: date-time
+          description: Дата добавления в избранное
+  
+  # Заметки
+    noteId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор заметки
+    
+    noteText:
+      type: string
+      minLength: 1
+      maxLength: 5000
+      description: Текст заметки
+    
+    noteCreatedAt:
+      type: string
+      format: date-time
+      description: Дата создания заметки
+    
+    Note:
+      type: object
+      required:
+        - noteId
+        - noteText
+        - user
+        - collectionMovie
+      properties:
+        noteId:
+          $ref: '#/components/schemas/noteId'
+        noteText:
+          $ref: '#/components/schemas/noteText'
+        user:
+          $ref: '#/components/schemas/User'
+        collectionMovie:
+          $ref: '#/components/schemas/CollectionMovie'
+        noteCreatedAt:
+          $ref: '#/components/schemas/noteCreatedAt'
+
+    CreateNoteRequest:
+      type: object
+      required:
+        - noteText
+        - collectionMovieId
+      properties:
+        noteText:
+          $ref: '#/components/schemas/noteText'
+        collectionMovieId:
+          $ref: '#/components/schemas/collectionMovieId'
+
+    UpdateNoteRequest:
+      type: object
+      required:
+        - noteText
+      properties:
+        noteText:
+          $ref: '#/components/schemas/noteText'
+
+  # Администрирование
+    actionAdminId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор действия администратора
+
+    adminActionType:
+      type: string
+      enum: [BLOCK, WARNING]
+      description: Тип действия администратора
+
+    adminActionReason:
+      type: string
+      minLength: 1
+      maxLength: 1000
+      description: Причина действия администратора
+
+    adminActionCreatedAt:
+      type: string
+      format: date-time
+      description: Дата действия администратора
+
+    AdminAction:
+      type: object
+      properties:
+        actionAdminId:
+          $ref: '#/components/schemas/actionAdminId'
+        admin:
+          $ref: '#/components/schemas/User'
+        targetUser:
+          $ref: '#/components/schemas/User'
+        adminActionType:
+          $ref: '#/components/schemas/adminActionType'
+        adminActionReason:
+          $ref: '#/components/schemas/adminActionReason'
+        adminActionCreatedAt:
+          $ref: '#/components/schemas/adminActionCreatedAt'
+
+    BlockUserRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Причина блокировки
+
+    WarnUserRequest:
+      type: object
+      required:
+        - warningMessage
+      properties:
+        warningMessage:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Текст предупреждения
+
+  # Общие схемы ошибок
+    errorCode:
+      type: integer
+      format: int32
+      description: HTTP-код ошибки
+
+    errorMessage:
+      type: string
+      description: Описание ошибки    
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/errorCode'
+        message:
+          $ref: '#/components/schemas/errorMessage'
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required:
+                  - field
+                  - message
+                properties:
+                  field:
+                    type: string
+                    description: Название поля с ошибкой
+                  message:
+                    type: string
+                    description: Описание ошибки валидации
+
+  parameters:
+    provider:
+      name: provider
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [vk, telegram, ok]
+      description: Провайдер аутентификации
+
+    userIdPath:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Уникальный идентификатор пользователя
+
+    collectionIdPath:
+      name: collectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Уникальный идентификатор подборки
+
+    movieIdPath:
+      name: movieId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Уникальный идентификатор фильма/сериала
+
+    noteIdPath:
+      name: noteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Уникальный идентификатор заметки
+
+    ratingIdPath:
+      name: ratingId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Уникальный идентификатор рейтинга
+
+    searchQueryParam:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+      description: Поисковый запрос для поиска фильмов/сериалов/подборок
+
+    genreFilterParam:
+      name: genre
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          format: uuid
+      description: Список идентификаторов жанров для фильтрации
+
+    movieYearFilterParam:
+      name: movieYear
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1895
+        maximum: 2100
+      description: Год выпуска фильма/сериала для фильтрации
+
+    ratingFilterParam:
+      name: minRating
+      in: query
+      required: false
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 10
+      description: Минимальный рейтинг для фильтрации
+
+    collectionTypeFilter:
+      name: collectionType
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/collectionType'
+      description: Тип подборки (публичная/приватная) для фильтрации
+
+    collectionAuthorFilterParam:
+      name: collectionAuthorId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: ID автора подборки для фильтрации его подборок
+
+    pageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Номер страницы
+
+    limitParam:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Количество элементов на странице
+
+  responses:
+    # 2xx: Success (успех)
+    OkResponse:
+      description: Запрос успешно обработан
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Успешно
+
+    MovieListResponse:
+      description: Список фильмов успешно получен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MovieSearchResult'
+
+    MovieDetailResponse:
+      description: Детальная информация о фильме
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MovieDetail'
+
+    CollectionResponse:
+      description: Подборка
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Collection'
+
+    CollectionDetailResponse:
+      description: Детальная информация о подборке фильмов/сериалов с заметками
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CollectionDetail'
+
+    CollectionListResponse:
+      description: Список подборок
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Collection'
+
+    FavoriteCollectionsListResponse:
+      description: Список избранных подборок
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/FavoriteCollection'
+
+    NoteResponse:
+      description: Заметка
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Note'
+
+    UserResponse:
+      description: Пользователь
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+
+    AuthSuccessResponse:
+      description: Успешная авторизация
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthResponse'
+
+    PaginatedMoviesResponse:
+      description: Пагинированный список фильмов
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PaginatedResponse'
+              - type: object
+                properties:
+                  items:
+                    $ref: '#/components/schemas/MovieSearchResult'
+
+    PaginatedCollectionsResponse:
+      description: Пагинированный список подборок
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PaginatedResponse'
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Collection'
+
+    # 4xx: Client Error (ошибка клиента)
+    BadRequestError:
+      description: '400: Некорректный запрос'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: "Некорректный запрос"
+
+    ValidationErrorResponse:
+      description: '400: Ошибка валидации данных'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            code: 400
+            message: "Ошибка валидации данных"
+            errors:
+              - field: "userEmail"
+                message: "Некорректный формат email"
+
+    UnauthorizedError:
+      description: '401: Не авторизован'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 401
+            message: "Требуется авторизация"
+
+    ForbiddenError:
+      description: '403: Запрещено (недостаточно прав)'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 403
+            message: "Доступ запрещен"
+
+    NotFoundError:
+      description: '404: Не найдено'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: "Ресурс не найден"
+
+    ConflictError:
+      description: '409: Конфликт данных'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 409
+            message: "Ресурс уже существует"
+
+    # 5xx: Server Error (ошибка сервера)
+    InternalServerError:
+      description: '500: Внутренняя ошибка сервера'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 500
+            message: "Внутренняя ошибка сервера"
+
+    ServiceUnavailableError:
+      description: '503: Сервис недоступен'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 503
+            message: "Сервис временно недоступен"
+
+tags:
+  - name: Auth
+    description: Регистрация и авторизация пользователей
+  - name: Users
+    description: Профили пользователей
+  - name: Collections
+    description: Подборки фильмов/сериалов
+  - name: Movies
+    description: Фильмы/сериалы (данные от API основного сайта онлайн-кинотеатра)
+  - name: Ratings
+    description: Рейтинг фильмов/сериалов
+  - name: Notes
+    description: Заметки к фильмам/сериалам в подборках
+  - name: FavoriteCollections
+    description: Избранные подборки
+  - name: Admin
+    description: Администрирование
+
+paths:
+  
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Регистрация пользователя
+      description: Создает новую учетную запись и отправляет письмо для подтверждения email
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован. Требуется подтверждение email.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Регистрация выполнена успешно. Проверьте email для подтверждения аккаунта."
+                  userId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+  
+  /auth/login: 
+    post:
+      tags:
+        - Auth
+      summary: Авторизация пользователя
+      description: Авторизация пользователя по email и паролю
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          description: Неверный email или пароль
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Email не подтвержден или пользователь заблокирован
+          $ref: '#/components/responses/ForbiddenError'
+  
+  /auth/oauth:
+    post:
+      tags:
+        - Auth
+      summary: Авторизация пользователя через социальные сети
+      description: Авторизация пользователя через VK, Telegram или OK
+      operationId: oauthLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthLoginRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+  
+  /auth/verify-email:
+    get:
+      tags:
+        - Auth
+      summary: Подтверждение email
+      description: Подтверждает email пользователя по токену из письма
+      operationId: verifyEmail
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 32
+            maxLength: 512
+          description: Токен подтверждения из письма
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '400':
+          description: Недействительный или просроченный токен
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Получение профиля пользователя
+      description: Возвращает публичную информацию о пользователе
+      operationId: getUserById
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Users
+      summary: Деактивация аккаунта
+      description: Деактивирует аккаунт пользователя (мягкое удаление)
+      operationId: deactivateUser
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Пользователь может удалить только свой аккаунт
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /users/{userId}/collections:
+    get:
+      tags:
+        - Users
+        - Collections
+      summary: Получение подборок пользователя
+      description: Возвращает список подборок пользователя с пагинацией
+      operationId: getUserCollections
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+        - $ref: '#/components/parameters/collectionTypeFilter'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedCollectionsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /users/{userId}/favorite-collections:
+    get:
+      tags:
+        - Users
+        - FavoriteCollections
+      summary: Получение избранных подборок пользователя
+      description: Возвращает список подборок, добавленных пользователем в избранное
+      operationId: getUserFavoriteCollections
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/FavoriteCollectionsListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /collections: 
+    get:
+      tags:
+        - Collections
+      summary: Поиск публичных подборок
+      description: Поиск публичных подборок по названию, автору с пагинацией
+      operationId: searchPublicCollections
+      parameters:
+        - $ref: '#/components/parameters/searchQueryParam'
+        - $ref: '#/components/parameters/collectionAuthorFilterParam'
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 50
+          description: Поиск по тегам
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedCollectionsResponse'
+    
+    post:
+      tags:
+        - Collections
+      summary: Создание новой подборки
+      description: Создает новую подборку для авторизованного пользователя
+      operationId: createCollection
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/CollectionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Подборка с таким названием уже существует у пользователя
+          $ref: '#/components/responses/ConflictError'
+  
+  /collections/{collectionId}: 
+    get:
+      tags:
+        - Collections
+      summary: Получение детальной информации о подборке
+      description: Возвращает подборку со списком фильмов/сериалов и заметками
+      operationId: getCollectionById
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/CollectionDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Нет доступа к приватной подборке
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    put:
+      tags:
+        - Collections
+      summary: Обновление подборки
+      description: Обновляет название, описание или тип подборки
+      operationId: updateCollection
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/CollectionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Пользователь не является владельцем подборки
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+    
+    delete:
+      tags:
+        - Collections
+      summary: Удаление подборки
+      description: Удаляет подборку (владелец или администратор)
+      operationId: deleteCollection
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /movies/search:
+    get:
+      tags:
+        - Movies
+      summary: Поиск фильмов
+      description: Поиск фильмов по названию, актеру с фильтрацией по жанру, году и рейтингу
+      operationId: searchMovies
+      parameters:
+        - $ref: '#/components/parameters/searchQueryParam'
+        - $ref: '#/components/parameters/genreFilterParam'
+        - $ref: '#/components/parameters/movieYearFilterParam'
+        - $ref: '#/components/parameters/ratingFilterParam'
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [relevance, year_desc, year_asc, rating_desc, rating_asc, added_desc]
+            default: relevance
+          description: Сортировка результатов
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaginatedMoviesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+  
+  /movies/{movieId}: 
+    get:
+      tags:
+        - Movies
+      summary: Получение детальной информации о фильме
+      operationId: getMovieById
+      parameters:
+        - $ref: '#/components/parameters/movieIdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/MovieDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
+  
+  /ratings: 
+    post:
+      tags:
+        - Ratings
+      summary: Оценка фильма
+      description: Выставляет оценку фильму (от 1 до 10)
+      operationId: rateMovie
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateMovieRequest'
+      responses:
+        '201':
+          description: Оценка сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rating'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /ratings/{ratingId}: 
+    put:
+      tags:
+        - Ratings
+      summary: Изменение оценки
+      operationId: updateRating
+      parameters:
+        - $ref: '#/components/parameters/ratingIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRatingRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /collections/{collectionId}/movies:
+    get:
+      tags:
+        - Collections
+      summary: Получение списка фильмов в подборке
+      operationId: getCollectionMovies
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список фильмов в подборке
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CollectionMovie'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    post:
+      tags:
+        - Collections
+      summary: Добавление фильма в подборку
+      description: Добавляет фильм в указанную подборку
+      operationId: addMovieToCollection
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMovieToCollectionRequest'
+      responses:
+        '201':
+          description: Фильм добавлен в подборку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionMovie'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Фильм уже добавлен в эту подборку
+          $ref: '#/components/responses/ConflictError'
+  
+  /collections/{collectionId}/movies/{movieId}: 
+    delete:
+      tags:
+        - Collections
+      summary: Удаление фильма из подборки
+      operationId: removeMovieFromCollection
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+        - $ref: '#/components/parameters/movieIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+ 
+  /collections/{collectionId}/random-movie:
+    get:
+      tags:
+        - Collections
+      summary: Случайный фильм из подборки
+      description: Возвращает случайный фильм из указанной подборки
+      operationId: getRandomMovieFromCollection
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      responses:
+        '200':
+          description: Случайный фильм из подборки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /notes:
+    post:
+      tags:
+        - Notes
+      summary: Создание заметки
+      description: Добавляет заметку к фильму в подборке
+      operationId: createNote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/NoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /notes/{noteId}: 
+    put:
+      tags:
+        - Notes
+      summary: Редактирование заметки
+      operationId: updateNote
+      parameters:
+        - $ref: '#/components/parameters/noteIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNoteRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/NoteResponse'
+        '400':
+          $ref: '#/components/responses/ValidationErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    
+    delete:
+      tags:
+        - Notes
+      summary: Удаление заметки
+      operationId: deleteNote
+      parameters:
+        - $ref: '#/components/parameters/noteIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /favorite-collections/{collectionId}: 
+    post:
+      tags:
+        - FavoriteCollections
+      summary: Добавление подборки в избранное
+      operationId: addToFavorites
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Подборка уже в избранном
+          $ref: '#/components/responses/ConflictError'
+    
+    delete:
+      tags:
+        - FavoriteCollections
+      summary: Удаление подборки из избранного
+      operationId: removeFromFavorites
+      parameters:
+        - $ref: '#/components/parameters/collectionIdPath'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  
+  /admin/users/{userId}/block: 
+    post:
+      tags:
+        - Admin
+      summary: Блокировка пользователя
+      operationId: blockUser
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockUserRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /admin/users/{userId}/warn:
+    post:
+      tags:
+        - Admin
+      summary: Отправка предупреждения пользователю
+      operationId: warnUser
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarnUserRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
